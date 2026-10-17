@@ -1,67 +1,478 @@
+/* ==========================
+   1. تنظیمات عمومی صفحه
+========================== */
+
+* {
+    box-sizing: border-box;
+}
 
 body {
-    font-family: sans-serif;
-    direction: rtl;
-    background: #f4f6f9;
-    margin: 30px;
-    color: #333;
+    margin: 0;
+    padding: 25px;
+    background: #f3f6fb;
+    color: #1f2937;
+    font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.8;
 }
 
 h1 {
-    text-align: center;
+    margin: 0 0 28px;
     color: #2563eb;
+    text-align: center;
+    font-size: 30px;
+}
+
+h2 {
+    margin: 0 0 18px;
+    color: #1e293b;
+    font-size: 22px;
+}
+
+/* ==========================
+   2. بخش‌های اصلی صفحه
+========================== */
+
+.panel {
+    margin: 25px auto;
+    padding: 24px;
+    background: #ffffff;
+    border: 1px solid #e5eaf2;
+    border-radius: 14px;
+    box-shadow: 0 5px 20px rgba(15, 23, 42, 0.05);
+}
+
+/* ==========================
+   3. دکمه‌های عمومی
+========================== */
+
+button,
+.btn,
+input[type="submit"],
+input[type="button"],
+a.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s ease,
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+button:hover,
+.btn:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+a.button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 9px rgba(15, 23, 42, 0.12);
+}
+
+/* ==========================
+   4. دکمه افزودن کاربر
+========================== */
+
+.btn-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 0 20px;
+    padding: 12px 22px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: #ffffff !important;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+    transition: all 0.2s ease;
+}
+
+.btn-add:hover {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    transform: translateY(-2px);
+    box-shadow: 0 7px 14px rgba(37, 99, 235, 0.25);
+}
+
+.plus-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 25px;
+    height: 25px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 7px;
+    font-size: 22px;
+    line-height: 1;
+}
+
+/* ==========================
+   5. دکمه‌های ویرایش و حذف
+========================== */
+
+.btn-edit,
+.btn-delete,
+.btn-secondary,
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 68px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-edit {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.btn-edit:hover {
+    background: #fcd34d;
+}
+
+.btn-delete {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.btn-delete:hover {
+    background: #fecaca;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
+}
+
+/* ==========================
+   6. جدول کاربران
+========================== */
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 10px;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    background: white;
-    margin: 20px 0;
+    background: #ffffff;
 }
 
-th, td {
-    padding: 10px;
-    border: 1px solid #ddd;
+thead {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+th,
+td {
+    padding: 12px 10px;
+    border: 1px solid #e5e7eb;
     text-align: center;
+    vertical-align: middle;
 }
 
 th {
-    background: #2563eb;
-    color: white;
+    font-weight: bold;
+    white-space: nowrap;
 }
 
-tr:nth-child(even) {
-    background: #f1f5f9;
+tbody tr:nth-child(even) {
+    background: #f8fafc;
 }
 
-input, button {
-    padding: 8px;
-    margin: 4px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+tbody tr:hover {
+    background: #eff6ff;
 }
 
-button {
-    background: #2563eb;
-    color: white;
-    cursor: pointer;
-    border: none;
+td {
+    overflow-wrap: anywhere;
 }
 
-button:hover {
-    opacity: 0.8;
+/* ==========================
+   7. دکمه‌های عملیات جدول
+========================== */
+
+.action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    flex-wrap: wrap;
 }
 
+td .btn-edit,
+td .btn-delete {
+    min-width: 58px;
+    padding: 7px 10px;
+}
+
+/* ==========================
+   8. فرم‌ها و ورودی‌ها
+========================== */
+
+.student-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    color: #374151;
+    font-weight: bold;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1f2937;
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    margin-top: 8px;
+}
+
+/* ==========================
+   9. جست‌وجو و فیلتر
+========================== */
+
+.search-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.search-form input,
+.search-form select {
+    width: auto;
+    min-width: 150px;
+    flex: 1;
+}
+
+/* ==========================
+   10. پیام‌های موفقیت و خطا
+========================== */
+
+.notification,
+.error-box {
+    padding: 13px 16px;
+    margin: 0 0 20px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    line-height: 1.9;
+}
+
+.notification {
+    font-weight: bold;
+}
+
+.notification-success {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #86efac;
+}
+
+.notification-error {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.notification-warning {
+    color: #9a3412;
+    background: #ffedd5;
+    border-color: #fdba74;
+}
+
+.error-box {
+    color: #b42318;
+    background: #fff1f0;
+    border-color: #f5b7b1;
+}
+
+.error-box strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.error-box ul {
+    margin: 0;
+    padding-right: 22px;
+}
+
+/* ==========================
+   11. نمایش در موبایل
+========================== */
+
+@media (max-width: 768px) {
+    body {
+        padding: 12px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    h2 {
+        font-size: 19px;
+    }
+
+    .panel {
+        padding: 14px;
+    }
+
+    .student-form {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        grid-column: auto;
+    }
+
+    th,
+    td {
+        padding: 9px 7px;
+        font-size: 12px;
+    }
+
+    .search-form {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .search-form input,
+    .search-form select {
+        width: 100%;
+    }
+}
+
+
+
+/* دکمه‌های عملیات جدول */
 .actions {
     display: flex;
+    align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-.delete {
-    background: #dc2626;
+/* حذف فاصله اضافی فرم حذف */
+.actions form {
+    margin: 0;
 }
 
-.edit {
-    background: #16a34a;
+/* دکمه ویرایش */
+.edit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 70px;
+    padding: 8px 14px;
+    background-color: #f59e0b;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.edit-button:hover {
+    background-color: #d97706;
+    transform: translateY(-1px);
+}
+
+/* دکمه حذف */
+.delete-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 70px;
+    padding: 8px 14px;
+    background-color: #dc2626;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.delete-button:hover {
+    background-color: #b91c1c;
+    transform: translateY(-1px);
 }
