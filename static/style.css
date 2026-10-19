@@ -1,366 +1,647 @@
-/* ==========================
-   1. تنظیمات عمومی صفحه
-========================== */
+
+/* ========================================
+   1. تنظیمات عمومی
+======================================== */
+
+:root {
+    --primary: #4361ee;
+    --primary-dark: #3048c5;
+    --primary-light: #eef2ff;
+
+    --success: #0f9f78;
+    --success-dark: #087f60;
+    --success-light: #e6f8f1;
+
+    --danger: #dc4c4c;
+    --danger-dark: #b92f3a;
+    --danger-light: #fff0f0;
+
+    --warning: #b7791f;
+    --warning-light: #fff6df;
+
+    --text: #243047;
+    --text-muted: #788398;
+
+    --border: #e4e9f2;
+    --surface: #ffffff;
+    --page-bg: #f4f6fb;
+
+    --radius: 14px;
+    --shadow: 0 8px 28px rgba(31, 45, 75, 0.06);
+}
 
 * {
     box-sizing: border-box;
 }
 
+html {
+    min-width: 320px;
+    scroll-behavior: smooth;
+}
+
 body {
     margin: 0;
-    padding: 25px;
-    background: #f3f6fb;
-    color: #1f2937;
+    padding: 32px 24px;
+    background: var(--page-bg);
+    color: var(--text);
     font-family: Vazirmatn, Tahoma, Arial, sans-serif;
     font-size: 14px;
-    line-height: 1.8;
+    line-height: 1.9;
 }
 
-h1 {
-    margin: 0 0 28px;
-    color: #2563eb;
-    text-align: center;
-    font-size: 30px;
+a {
+    color: inherit;
 }
-
-h2 {
-    margin: 0 0 18px;
-    color: #1e293b;
-    font-size: 22px;
-}
-
-/* ==========================
-   2. بخش‌های اصلی صفحه
-========================== */
-
-.panel {
-    margin: 25px auto;
-    padding: 24px;
-    background: #ffffff;
-    border: 1px solid #e5eaf2;
-    border-radius: 14px;
-    box-shadow: 0 5px 20px rgba(15, 23, 42, 0.05);
-}
-
-/* ==========================
-   3. دکمه‌های عمومی
-========================== */
 
 button,
-.btn,
-input[type="submit"],
-input[type="button"],
-a.button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: bold;
-    text-decoration: none;
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button,
+a {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button {
     cursor: pointer;
-    transition: background 0.2s ease,
-                transform 0.2s ease,
-                box-shadow 0.2s ease;
 }
 
-button:hover,
-.btn:hover,
-input[type="submit"]:hover,
-input[type="button"]:hover,
-a.button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 9px rgba(15, 23, 42, 0.12);
+.container {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
 }
 
-/* ==========================
-   4. دکمه افزودن کاربر
-========================== */
+h1,
+h2,
+p {
+    margin-top: 0;
+}
+
+
+/* ========================================
+   2. سربرگ صفحه
+======================================== */
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+
+    margin-bottom: 28px;
+    padding: 8px 2px;
+}
+
+.header-content {
+    min-width: 0;
+}
+
+.header-label {
+    display: inline-block;
+    margin-bottom: 4px;
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #202c47;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.6;
+}
+
+.header-description {
+    margin: 5px 0 0;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+
+/* ========================================
+   3. پنل اصلی
+======================================== */
+
+.panel {
+    min-width: 0;
+    margin: 0 auto;
+    padding: 28px;
+
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+}
+
+.section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.section-heading h2 {
+    margin: 0 0 4px;
+    color: #26334d;
+    font-size: 21px;
+    font-weight: 800;
+}
+
+.section-heading p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+
+/* ========================================
+   4. دکمه عمومی و افکت‌ها
+======================================== */
+
+button,
+a.button,
+.btn,
+.btn-add,
+.show-all-button {
+    -webkit-appearance: none;
+    appearance: none;
+    text-decoration: none;
+}
+
+button,
+a.button,
+.btn,
+.btn-add,
+.show-all-button {
+    transition:
+        background-color 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid rgba(67, 97, 238, 0.28);
+    outline-offset: 3px;
+}
+
+
+/* ========================================
+   5. دکمه افزودن کاربر
+======================================== */
 
 .btn-add {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin: 0 0 20px;
-    padding: 12px 22px;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+
+    flex-shrink: 0;
+    min-height: 48px;
+    padding: 10px 19px;
+
+    background: linear-gradient(135deg, #526df4, #3853d9);
     color: #ffffff !important;
-    border-radius: 10px;
-    font-family: inherit;
-    font-size: 15px;
-    font-weight: bold;
-    text-decoration: none;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
-    transition: all 0.2s ease;
+
+    border: 1px solid transparent;
+    border-radius: 11px;
+
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+
+    box-shadow: 0 5px 13px rgba(67, 97, 238, 0.20);
 }
 
 .btn-add:hover {
-    background: linear-gradient(135deg, #2563eb, #1e40af);
+    background: linear-gradient(135deg, #405de5, #2d43bd);
     transform: translateY(-2px);
-    box-shadow: 0 7px 14px rgba(37, 99, 235, 0.25);
+    box-shadow: 0 8px 18px rgba(67, 97, 238, 0.27);
+}
+
+.btn-add:active {
+    transform: translateY(0);
 }
 
 .plus-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 25px;
-    height: 25px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 7px;
-    font-size: 22px;
+
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+
+    font-size: 23px;
+    font-weight: 400;
     line-height: 1;
 }
 
-/* ==========================
-   5. دکمه‌های ویرایش و حذف
-========================== */
 
-.btn-edit,
-.btn-delete,
-.btn-secondary,
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 68px;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 7px;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: bold;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-edit {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.btn-edit:hover {
-    background: #fcd34d;
-}
-
-.btn-delete {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-.btn-delete:hover {
-    background: #fecaca;
-}
-
-.btn-primary {
-    background: #2563eb;
-    color: #ffffff;
-}
-
-.btn-primary:hover {
-    background: #1d4ed8;
-}
-
-.btn-secondary {
-    background: #e5e7eb;
-    color: #374151;
-}
-
-.btn-secondary:hover {
-    background: #d1d5db;
-}
-
-/* ==========================
-   6. جدول کاربران
-========================== */
-
-.table-container {
-    width: 100%;
-    overflow-x: auto;
-    border-radius: 10px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #ffffff;
-}
-
-thead {
-    background: #2563eb;
-    color: #ffffff;
-}
-
-th,
-td {
-    padding: 12px 10px;
-    border: 1px solid #e5e7eb;
-    text-align: center;
-    vertical-align: middle;
-}
-
-th {
-    font-weight: bold;
-    white-space: nowrap;
-}
-
-tbody tr:nth-child(even) {
-    background: #f8fafc;
-}
-
-tbody tr:hover {
-    background: #eff6ff;
-}
-
-td {
-    overflow-wrap: anywhere;
-}
-
-/* ==========================
-   7. دکمه‌های عملیات جدول
-========================== */
-
-.action-buttons {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    flex-wrap: wrap;
-}
-
-td .btn-edit,
-td .btn-delete {
-    min-width: 58px;
-    padding: 7px 10px;
-}
-
-/* ==========================
-   8. فرم‌ها و ورودی‌ها
-========================== */
+/* ========================================
+   6. فرم جست‌وجو
+======================================== */
 
 .student-form {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 19px;
+}
+
+.search-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
+
+    margin-bottom: 27px;
+    padding: 21px;
+
+    background: #f8faff;
+    border: 1px solid #e8edfa;
+    border-radius: 13px;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 7px;
+    min-width: 0;
 }
 
 .form-group label {
-    color: #374151;
-    font-weight: bold;
+    color: #394660;
+    font-size: 13px;
+    font-weight: 800;
 }
 
 input,
 select,
 textarea {
     width: 100%;
-    padding: 11px 12px;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
+    min-width: 0;
+    min-height: 45px;
+    padding: 10px 13px;
+
     background: #ffffff;
-    color: #1f2937;
-    font-family: inherit;
-    font-size: 14px;
-    transition: border-color 0.2s ease,
-                box-shadow 0.2s ease;
+    color: var(--text);
+
+    border: 1px solid #dce3ef;
+    border-radius: 9px;
+
+    font-size: 13px;
+    line-height: 1.8;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease;
 }
 
-textarea {
-    min-height: 100px;
-    resize: vertical;
+input::placeholder,
+textarea::placeholder {
+    color: #a2aabd;
+    opacity: 1;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+    border-color: #b8c5e0;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.11);
 }
+
+textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+
+/* ========================================
+   7. دکمه‌های جست‌وجو و نمایش همه
+======================================== */
 
 .form-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     flex-wrap: wrap;
-    grid-column: 1 / -1;
-    margin-top: 8px;
+
+    margin-top: 2px;
 }
 
-/* ==========================
-   9. جست‌وجو و فیلتر
-========================== */
+.full-width {
+    grid-column: 1 / -1;
+}
 
-.search-form {
+.create-button,
+.show-all-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+
+    min-height: 45px;
+    padding: 10px 19px;
+
+    border: 1px solid transparent;
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+.create-button {
+    background: linear-gradient(135deg, #526df4, #3853d9);
+    color: #ffffff;
+
+    box-shadow: 0 4px 10px rgba(67, 97, 238, 0.17);
+}
+
+.create-button:hover {
+    background: linear-gradient(135deg, #405de5, #2d43bd);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(67, 97, 238, 0.24);
+}
+
+.show-all-button {
+    background: #e8f7f1;
+    color: #087f60 !important;
+
+    border-color: #c7ecdf;
+    box-shadow: 0 3px 8px rgba(15, 159, 120, 0.07);
+}
+
+.show-all-button:hover {
+    background: #d5f2e7;
+    color: #06694f !important;
+
+    border-color: #a7dfcc;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(15, 159, 120, 0.13);
+}
+
+.create-button:active,
+.show-all-button:active {
+    transform: translateY(0);
+}
+
+
+/* ========================================
+   8. جدول کاربران
+======================================== */
+
+.table-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    background: #ffffff;
+    scrollbar-width: thin;
+    scrollbar-color: #c5cee0 #f3f5fa;
+}
+
+.table-container::-webkit-scrollbar {
+    height: 9px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f3f5fa;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #c5cee0;
+    border-radius: 10px;
+}
+
+table {
+    width: 100%;
+    min-width: 1150px;
+
+    border-collapse: separate;
+    border-spacing: 0;
+
+    background: #ffffff;
+    font-size: 12px;
+}
+
+thead {
+    background: #edf2ff;
+    color: #354b9b;
+}
+
+th {
+    padding: 15px 12px;
+
+    background: #edf2ff;
+    color: #354b9b;
+
+    border-bottom: 1px solid #dce5fc;
+
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    text-align: center;
+}
+
+td {
+    padding: 13px 12px;
+
+    color: #465168;
+    text-align: center;
+    vertical-align: middle;
+
+    border-bottom: 1px solid #edf0f6;
+
+    overflow-wrap: anywhere;
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+tbody tr {
+    background: #ffffff;
+    transition: background-color 0.18s ease;
+}
+
+tbody tr:nth-child(even) {
+    background: #fafbfe;
+}
+
+tbody tr:hover {
+    background: #f0f5ff;
+}
+
+.student-name {
+    color: #273653;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.mongo-id {
+    min-width: 200px;
+    color: #64748b;
+    font-family: monospace;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.ltr-cell {
+    min-width: 145px;
+    white-space: nowrap;
+}
+
+.address {
+    min-width: 150px;
+    max-width: 240px;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+
+/* ========================================
+   9. دکمه‌های ویرایش و حذف
+======================================== */
+
+.actions {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: nowrap;
 }
 
-.search-form input,
-.search-form select {
-    width: auto;
-    min-width: 150px;
-    flex: 1;
+.actions form {
+    display: inline-flex;
+    margin: 0;
+    padding: 0;
 }
 
-/* ==========================
+.edit-button,
+.delete-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 63px;
+    min-height: 34px;
+    padding: 6px 11px;
+
+    border: 1px solid transparent;
+    border-radius: 7px;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.edit-button {
+    background: #fff4d9;
+    color: #9a6500 !important;
+    border-color: #f5e2a9;
+}
+
+.edit-button:hover {
+    background: #ffe8aa;
+    color: #805200 !important;
+    border-color: #f0d47b;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 7px rgba(183, 121, 31, 0.10);
+}
+
+.delete-button {
+    background: #fff0f0;
+    color: #c33d48;
+    border-color: #f7d5d7;
+}
+
+.delete-button:hover {
+    background: #ffe0e2;
+    color: #a92230;
+    border-color: #f0bfc3;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 7px rgba(220, 76, 76, 0.10);
+}
+
+
+/* ========================================
    10. پیام‌های موفقیت و خطا
-========================== */
+======================================== */
 
 .notification,
 .error-box {
+    margin-bottom: 22px;
     padding: 13px 16px;
-    margin: 0 0 20px;
+
     border: 1px solid transparent;
-    border-radius: 9px;
+    border-radius: 10px;
+
     line-height: 1.9;
 }
 
 .notification {
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .notification-success {
-    color: #166534;
-    background: #dcfce7;
-    border-color: #86efac;
+    color: #087f4d;
+    background: #e9f9f0;
+    border-color: #b8ebcd;
 }
 
 .notification-error {
-    color: #991b1b;
-    background: #fee2e2;
-    border-color: #fca5a5;
+    color: #b42332;
+    background: #fff0f1;
+    border-color: #f5c4c8;
 }
 
 .notification-warning {
-    color: #9a3412;
-    background: #ffedd5;
-    border-color: #fdba74;
+    color: #99500b;
+    background: #fff5e6;
+    border-color: #f4d5a7;
 }
 
 .error-box {
-    color: #b42318;
-    background: #fff1f0;
-    border-color: #f5b7b1;
+    color: #b42332;
+    background: #fff0f1;
+    border-color: #f5c4c8;
 }
 
 .error-box strong {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 7px;
 }
 
 .error-box ul {
@@ -368,111 +649,204 @@ textarea:focus {
     padding-right: 22px;
 }
 
-/* ==========================
-   11. نمایش در موبایل
-========================== */
 
-@media (max-width: 768px) {
+/* ========================================
+   11. حالت خالی جدول
+======================================== */
+
+.empty-message {
+    padding: 38px 20px !important;
+    color: var(--text-muted);
+    text-align: center;
+    white-space: normal;
+}
+
+.empty-message strong {
+    display: block;
+    margin: 7px 0 4px;
+    color: #35415a;
+    font-size: 14px;
+}
+
+.empty-message p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.empty-icon {
+    display: block;
+    color: #8295c8;
+    font-size: 29px;
+    line-height: 1.3;
+}
+
+
+/* ========================================
+   12. فرم افزودن و ویرایش
+======================================== */
+
+.student-form:not(.search-form) .form-actions {
+    grid-column: 1 / -1;
+}
+
+.student-form:not(.search-form) .form-actions button,
+.student-form:not(.search-form) .form-actions a {
+    min-height: 43px;
+}
+
+
+/* ========================================
+   13. پایین صفحه
+======================================== */
+
+.page-footer {
+    padding: 22px 10px 4px;
+    color: #9aa3b5;
+    font-size: 12px;
+    text-align: center;
+}
+
+
+/* ========================================
+   14. تبلت
+======================================== */
+
+@media (max-width: 1000px) {
     body {
-        padding: 12px;
-    }
-
-    h1 {
-        font-size: 24px;
-    }
-
-    h2 {
-        font-size: 19px;
+        padding: 24px 18px;
     }
 
     .panel {
-        padding: 14px;
+        padding: 22px;
     }
 
-    .student-form {
-        grid-template-columns: 1fr;
+    .search-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .form-actions {
-        grid-column: auto;
+    .search-form .form-actions {
+        grid-column: 1 / -1;
     }
 
-    th,
-    td {
-        padding: 9px 7px;
+    .page-header h1 {
+        font-size: 27px;
+    }
+}
+
+
+/* ========================================
+   15. موبایل
+======================================== */
+
+@media (max-width: 600px) {
+    body {
+        padding: 14px 10px;
+        font-size: 13px;
+    }
+
+    .page-header {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 18px;
+        padding: 5px 3px;
+    }
+
+    .page-header h1 {
+        font-size: 24px;
+    }
+
+    .header-description {
+        font-size: 12px;
+    }
+
+    .btn-add {
+        align-self: flex-start;
+        min-height: 44px;
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+
+    .panel {
+        padding: 15px 12px;
+        border-radius: 13px;
+    }
+
+    .section-heading {
+        margin-bottom: 16px;
+    }
+
+    .section-heading h2 {
+        font-size: 19px;
+    }
+
+    .section-heading p {
         font-size: 12px;
     }
 
     .search-form {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        padding: 14px;
+        margin-bottom: 20px;
+    }
+
+    .search-form .form-actions {
+        grid-column: auto;
         align-items: stretch;
         flex-direction: column;
+        gap: 9px;
     }
 
-    .search-form input,
-    .search-form select {
+    .create-button,
+    .show-all-button {
         width: 100%;
+        min-height: 44px;
+    }
+
+    .form-actions {
+        gap: 9px;
+    }
+
+    input,
+    select,
+    textarea {
+        min-height: 44px;
+        font-size: 13px;
+    }
+
+    th,
+    td {
+        padding: 11px 9px;
+    }
+
+    .notification,
+    .error-box {
+        padding: 11px 12px;
+        font-size: 12px;
+    }
+
+    .page-footer {
+        padding-top: 17px;
     }
 }
 
 
+/* ========================================
+   16. کاهش حرکت برای دسترس‌پذیری
+======================================== */
 
-/* دکمه‌های عملیات جدول */
-.actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
 
-/* حذف فاصله اضافی فرم حذف */
-.actions form {
-    margin: 0;
-}
-
-/* دکمه ویرایش */
-.edit-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 70px;
-    padding: 8px 14px;
-    background-color: #f59e0b;
-    color: #ffffff !important;
-    border: none;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: bold;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.2s;
-}
-
-.edit-button:hover {
-    background-color: #d97706;
-    transform: translateY(-1px);
-}
-
-/* دکمه حذف */
-.delete-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 70px;
-    padding: 8px 14px;
-    background-color: #dc2626;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.2s;
-}
-
-.delete-button:hover {
-    background-color: #b91c1c;
-    transform: translateY(-1px);
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

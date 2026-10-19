@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
@@ -14,31 +15,102 @@
 
     <main class="container">
 
+        <!-- سربرگ صفحه -->
         <header class="page-header">
 
-            <h1>مدیریت کاربران</h1>
+            <div class="header-content">
+                <span class="header-label">پنل مدیریت</span>
+                <h1>مدیریت کاربران</h1>
+                <p class="header-description">
+                    مدیریت، جست‌وجو و ویرایش اطلاعات کاربران
+                </p>
+            </div>
 
             <a href="/add" class="btn-add">
-                <span class="plus-icon">+</span>
-                افزودن کاربر جدید
+                <span class="plus-icon" aria-hidden="true">+</span>
+                <span>افزودن کاربر جدید</span>
             </a>
 
         </header>
 
+        <!-- پنل اصلی -->
         <section class="panel">
 
+            <!-- پیام‌های سیستم -->
             {% if notification %}
             <div
                 class="notification notification-{{ notification.type }}"
-                role="status">
+                role="status"
+                aria-live="polite">
 
                 {{ notification.text }}
 
             </div>
             {% endif %}
 
-            <h2>فهرست کاربران</h2>
+            <!-- عنوان فهرست -->
+            <div class="section-heading">
+                <div>
+                    <h2>فهرست کاربران</h2>
+                    <p>برای یافتن کاربر، یکی از فیلدهای زیر را پر کنید.</p>
+                </div>
+            </div>
 
+            <!-- فرم جست‌وجو -->
+            <form action="/" method="get" class="student-form search-form">
+
+                <div class="form-group">
+                    <label for="search_name">نام و نام خانوادگی</label>
+                    <input
+                        type="text"
+                        id="search_name"
+                        name="name"
+                        placeholder="مثلاً علی رضایی"
+                        value="{{ search_name }}"
+                        autocomplete="name">
+                </div>
+
+                <div class="form-group">
+                    <label for="search_phone">شماره موبایل</label>
+                    <input
+                        type="tel"
+                        id="search_phone"
+                        name="phone"
+                        dir="ltr"
+                        placeholder="09123456789"
+                        value="{{ search_phone }}"
+                        autocomplete="tel">
+                </div>
+
+                <div class="form-group">
+                    <label for="search_email">ایمیل</label>
+                    <input
+                        type="text"
+                        id="search_email"
+                        name="email"
+                        dir="ltr"
+                        placeholder="example@email.com"
+                        value="{{ search_email }}"
+                        autocomplete="email">
+                </div>
+
+                <div class="form-actions full-width">
+
+                    <button type="submit" class="create-button">
+                        <span aria-hidden="true">⌕</span>
+                        جست‌وجوی کاربران
+                    </button>
+
+                    <a href="/" class="show-all-button">
+                        <span aria-hidden="true">↻</span>
+                        نمایش همه کاربران
+                    </a>
+
+                </div>
+
+            </form>
+
+            <!-- جدول کاربران -->
             <div class="table-container">
 
                 <table>
@@ -68,7 +140,9 @@
                                 {{ student._id }}
                             </td>
 
-                            <td>{{ student.name }}</td>
+                            <td class="student-name">
+                                {{ student.name }}
+                            </td>
 
                             <td>{{ student.age }}</td>
 
@@ -84,11 +158,11 @@
                                 {{ student.get('birth_place', '-') }}
                             </td>
 
-                            <td dir="ltr">
+                            <td class="ltr-cell" dir="ltr">
                                 {{ student.get('phone', '-') }}
                             </td>
 
-                            <td dir="ltr">
+                            <td class="ltr-cell" dir="ltr">
                                 {{ student.get('email', '-') }}
                             </td>
 
@@ -97,15 +171,12 @@
                             </td>
 
                             <td>
-
                                 <div class="actions">
 
                                     <a
                                         href="/add/{{ student._id }}"
                                         class="button edit-button">
-
                                         ویرایش
-
                                     </a>
 
                                     <form
@@ -116,15 +187,12 @@
                                         <button
                                             type="submit"
                                             class="delete-button">
-
                                             حذف
-
                                         </button>
 
                                     </form>
 
                                 </div>
-
                             </td>
 
                         </tr>
@@ -133,7 +201,17 @@
 
                         <tr>
                             <td colspan="10" class="empty-message">
-                                هنوز کاربری ثبت نشده است.
+
+                                {% if search_performed %}
+                                    <span class="empty-icon" aria-hidden="true">⌕</span>
+                                    <strong>کاربری پیدا نشد</strong>
+                                    <p>عبارت جست‌وجو را بررسی کنید یا همه کاربران را نمایش دهید.</p>
+                                {% else %}
+                                    <span class="empty-icon" aria-hidden="true">♙</span>
+                                    <strong>هنوز کاربری ثبت نشده است</strong>
+                                    <p>برای شروع، کاربر جدیدی به فهرست اضافه کنید.</p>
+                                {% endif %}
+
                             </td>
                         </tr>
 
@@ -147,19 +225,20 @@
 
         </section>
 
+        <footer class="page-footer">
+            سامانه مدیریت کاربران
+        </footer>
+
     </main>
 
     <script>
-        // حذف خودکار تمام پیام‌ها پس از 4 ثانیه
+        // حذف خودکار پیام‌های سیستم پس از 4 ثانیه
         document.querySelectorAll(".notification").forEach(function (message) {
-
             setTimeout(function () {
                 message.remove();
             }, 4000);
-
         });
     </script>
 
 </body>
-
 </html>
