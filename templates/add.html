@@ -4,17 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>{{ page_title }}</title>
+
     <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
 
     <main class="container">
+
         <section class="panel form-panel">
 
             <h1>{{ page_title }}</h1>
 
+            <!-- شناسه کاربر در حالت ویرایش -->
             {% if student and student._id %}
             <p class="student-id">
                 شناسه MongoDB:
@@ -22,8 +26,10 @@
             </p>
             {% endif %}
 
+            <!-- نمایش خطاهای اعتبارسنجی -->
             {% if errors %}
             <div class="error-box" role="alert">
+
                 <strong>لطفاً موارد زیر را اصلاح کنید:</strong>
 
                 <ul>
@@ -31,17 +37,27 @@
                     <li>{{ error }}</li>
                     {% endfor %}
                 </ul>
+
             </div>
             {% endif %}
 
+            <!-- فرم افزودن یا ویرایش کاربر -->
             <form
                 action="{{ form_action }}"
                 method="post"
                 class="student-form"
-                novalidate>
+                novalidate
+            >
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token }}"
+                >
 
                 <div class="form-group">
                     <label for="name">نام و نام خانوادگی</label>
+
                     <input
                         type="text"
                         id="name"
@@ -49,11 +65,13 @@
                         minlength="2"
                         maxlength="50"
                         value="{{ form_data.name if form_data else (student.name if student else '') }}"
-                        required>
+                        required
+                    >
                 </div>
 
                 <div class="form-group">
                     <label for="age">سن</label>
+
                     <input
                         type="number"
                         id="age"
@@ -61,21 +79,25 @@
                         min="0"
                         max="120"
                         value="{{ form_data.age if form_data else (student.age if student else '') }}"
-                        required>
+                        required
+                    >
                 </div>
 
                 <div class="form-group">
                     <label for="birth_date">تاریخ تولد</label>
+
                     <input
                         type="date"
                         id="birth_date"
                         name="birth_date"
                         value="{{ form_data.birth_date if form_data else (student.birth_date if student else '') }}"
-                        required>
+                        required
+                    >
                 </div>
 
                 <div class="form-group">
                     <label for="father_name">نام پدر</label>
+
                     <input
                         type="text"
                         id="father_name"
@@ -83,11 +105,13 @@
                         minlength="2"
                         maxlength="50"
                         value="{{ form_data.father_name if form_data else (student.father_name if student else '') }}"
-                        required>
+                        required
+                    >
                 </div>
 
                 <div class="form-group">
                     <label for="birth_place">محل تولد</label>
+
                     <input
                         type="text"
                         id="birth_place"
@@ -95,42 +119,51 @@
                         minlength="2"
                         maxlength="100"
                         value="{{ form_data.birth_place if form_data else (student.birth_place if student else '') }}"
-                        required>
+                        required
+                    >
                 </div>
 
                 <div class="form-group">
                     <label for="phone">شماره تلفن</label>
+
                     <input
                         type="tel"
                         id="phone"
                         name="phone"
                         placeholder="09123456789"
                         value="{{ form_data.phone if form_data else (student.phone if student else '') }}"
-                        required>
+                        required
+                    >
                 </div>
 
                 <div class="form-group">
                     <label for="email">ایمیل</label>
+
                     <input
                         type="email"
                         id="email"
                         name="email"
                         placeholder="example@email.com"
                         value="{{ form_data.email if form_data else (student.email if student else '') }}"
-                        required>
+                        required
+                    >
                 </div>
 
                 <div class="form-group full-width">
                     <label for="address">آدرس</label>
+
                     <textarea
                         id="address"
                         name="address"
                         rows="4"
                         maxlength="200"
-                        placeholder="آدرس را وارد کنید">{{ form_data.address if form_data else (student.address if student and student.address else '') }}</textarea>
+                        placeholder="آدرس را وارد کنید"
+                    >{{ form_data.address if form_data else (student.address if student and student.address else '') }}</textarea>
                 </div>
 
+                <!-- دکمه‌های فرم -->
                 <div class="form-actions full-width">
+
                     <button type="submit" class="create-button">
                         {{ submit_text }}
                     </button>
@@ -138,12 +171,15 @@
                     <a href="/" class="button cancel-button">
                         بازگشت
                     </a>
+
                 </div>
 
             </form>
 
         </section>
+
     </main>
 
 </body>
+
 </html>

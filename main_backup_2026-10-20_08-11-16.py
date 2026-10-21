@@ -1,0 +1,769 @@
+# export SESSION_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+
+
+import os
+import re
+from datetime import date
+
+from bson import ObjectId
+from bson.errors import InvalidId
+from dotenv import load_dotenv
+load_dotenv()
+
+from fastapi import (
+    FastAPI,
+    Depends,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+)
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from pydantic import BaseModel, EmailStr, Field, ValidationError
+from starlette.middleware.sessions import SessionMiddleware
+
+from database import admins_collection, students_collection
+from security import verify_password
+
+
+# ==========================================
+# 1. تنظیمات اصلی برنامه
+# ==========================================
+
+app = FastAPI()
+
+
+SECRET_KEY = os.environ.get("SESSION_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError(
+        "متغیر SESSION_SECRET_KEY تنظیم نشده است."
+    )
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    session_cookie="user_session",
+    max_age=60 * 60,
+    same_site="lax",
+    https_only=False,
+)
+
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static",
+)
+
+templates = Jinja2Templates(directory="templates")
+
+
+# ==========================================
+# 2. خطای اختصاصی ورود مدیر
+# ==========================================
+
+class AdminLoginRequired(Exception):
+    """خطای اختصاصی برای صفحات نیازمند ورود مدیر."""
+    pass
+
+
+@app.exception_handler(AdminLoginRequired)
+async def admin_login_required_handler(
+    request: Request,
+    exc: AdminLoginRequired,
+):
+    return RedirectResponse(
+        url="/login",
+        status_code=303,
+    )
+
+
+# ==========================================
+# 3. بررسی ورود مدیر برای صفحات وب
+# ==========================================
+
+def require_admin(request: Request):
+    admin_id = request.session.get("admin_id")
+
+    # اگر مدیر وارد نشده باشد
+    if not admin_id:
+        raise AdminLoginRequired()
+
+    # تبدیل شناسه ذخیره‌شده به ObjectId
+    try:
+        mongo_admin_id = ObjectId(admin_id)
+
+    except (InvalidId, TypeError):
+        request.session.clear()
+        raise AdminLoginRequired()
+
+    # بررسی وجود حساب مدیر در MongoDB
+    admin = admins_collection.find_one({
+        "_id": mongo_admin_id
+    })
+
+    if admin is None:
+        request.session.clear()
+        raise AdminLoginRequired()
+
+    return admin
+
+
+# ==========================================
+# 4. بررسی ورود مدیر برای APIها
+# ==========================================
+
+def require_api_admin(request: Request):
+    admin_id = request.session.get("admin_id")
+
+    # بررسی وجود شناسه مدیر در نشست
+    if not admin_id:
+        raise HTTPException(
+            status_code=401,
+            detail="برای استفاده از این API باید وارد شوید.",
+        )
+
+    # بررسی معتبر بودن شناسه مدیر
+    try:
+        mongo_admin_id = ObjectId(admin_id)
+
+    except (InvalidId, TypeError):
+        request.session.clear()
+        raise HTTPException(
+            status_code=401,
+            detail="نشست مدیر معتبر نیست.",
+        )
+
+    # بررسی وجود حساب مدیر در پایگاه داده
+    admin = admins_collection.find_one({
+        "_id": mongo_admin_id
+    })
+
+    if admin is None:
+        request.session.clear()
+        raise HTTPException(
+            status_code=401,
+            detail="حساب مدیر پیدا نشد.",
+        )
+
+    return admin
+
+
+# ==========================================
+# 5. ورود مدیر
+# ==========================================
+
+@app.get("/login", response_class=HTMLResponse)
+def show_login_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"error": None},
+    )
+
+
+@app.post("/login")
+def login_admin(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    # جست‌وجوی حساب مدیر در MongoDB
+    admin = admins_collection.find_one({
+        "username": username.strip()
+    })
+
+    # بررسی نام کاربری و رمز عبور
+    if (
+        admin is None
+        or not verify_password(
+            password,
+            admin["hashed_password"],
+        )
+    ):
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "error": "نام کاربری یا رمز عبور اشتباه است."
+            },
+            status_code=401,
+        )
+
+    # پاک‌کردن اطلاعات نشست قبلی
+    request.session.clear()
+
+    # ذخیره شناسه مدیر در نشست
+    request.session["admin_id"] = str(admin["_id"])
+
+    # انتقال به صفحه اصلی
+    return RedirectResponse(
+        url="/",
+        status_code=303,
+    )
+
+
+
+
+
+@app.post("/logout")
+async def logout(request: Request):
+    request.session.clear()
+
+    return RedirectResponse(
+        url="/login",
+        status_code=303
+    )
+
+
+
+
+
+
+# ==========================================
+# 6. توابع کمکی شناسه و اطلاعات کاربر
+# ==========================================
+
+def parse_student_id(student_id: str) -> ObjectId:
+    try:
+        return ObjectId(student_id)
+
+    except (InvalidId, TypeError):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid student ID",
+        )
+
+
+def serialize_student(student: dict) -> dict:
+    return {
+        **student,
+        "_id": str(student["_id"]),
+    }
+
+
+# ==========================================
+# 7. مدل اعتبارسنجی اطلاعات کاربر
+# ==========================================
+
+class Student(BaseModel):
+    name: str = Field(
+        min_length=2,
+        max_length=50,
+    )
+
+    age: int = Field(
+        ge=0,
+        le=120,
+    )
+
+    birth_date: date
+
+    father_name: str = Field(
+        min_length=2,
+        max_length=50,
+    )
+
+    birth_place: str = Field(
+        min_length=2,
+        max_length=100,
+    )
+
+    phone: str = Field(
+        pattern=r"^09\d{9}$",
+    )
+
+    email: EmailStr
+
+    address: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=200,
+    )
+
+
+# ==========================================
+# 8. تبدیل خطاهای اعتبارسنجی به فارسی
+# ==========================================
+
+def get_persian_errors(
+    exc: ValidationError,
+) -> list[str]:
+
+    messages = {
+        "name": "نام باید بین ۲ تا ۵۰ کاراکتر باشد.",
+        "age": "سن باید عددی بین ۰ تا ۱۲۰ باشد.",
+        "birth_date": "تاریخ تولد معتبر نیست.",
+        "father_name": "نام پدر باید بین ۲ تا ۵۰ کاراکتر باشد.",
+        "birth_place": "محل تولد باید بین ۲ تا ۱۰۰ کاراکتر باشد.",
+        "phone": "شماره تلفن باید با 09 شروع شود و ۱۱ رقم داشته باشد.",
+        "email": "لطفاً یک ایمیل معتبر وارد کنید.",
+        "address": "آدرس باید بین ۲ تا ۲۰۰ کاراکتر باشد.",
+    }
+
+    errors = []
+
+    for error in exc.errors():
+        field = str(error["loc"][-1])
+
+        message = messages.get(
+            field,
+            "یکی از اطلاعات واردشده معتبر نیست.",
+        )
+
+        if message not in errors:
+            errors.append(message)
+
+    return errors
+
+
+# ==========================================
+# 9. صفحه اصلی و جست‌وجوی کاربران
+# ==========================================
+
+@app.get("/", response_class=HTMLResponse)
+def home(
+    request: Request,
+    message: str | None = None,
+    name: str = "",
+    phone: str = "",
+    email: str = "",
+    admin: dict = Depends(require_admin),
+):
+    search_filter = {}
+
+    if name.strip():
+        search_filter["name"] = {
+            "$regex": re.escape(name.strip()),
+            "$options": "i",
+        }
+
+    if phone.strip():
+        search_filter["phone"] = {
+            "$regex": re.escape(phone.strip()),
+        }
+
+    if email.strip():
+        search_filter["email"] = {
+            "$regex": re.escape(email.strip()),
+            "$options": "i",
+        }
+
+    students = [
+        serialize_student(student)
+        for student in students_collection.find(search_filter)
+    ]
+
+    messages = {
+        "added": {
+            "text": "کاربر جدید اضافه شد.",
+            "type": "success",
+        },
+        "deleted": {
+            "text": "کاربر با موفقیت حذف شد.",
+            "type": "error",
+        },
+        "updated": {
+            "text": "اطلاعات کاربر با موفقیت اصلاح شد.",
+            "type": "warning",
+        },
+    }
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "students": students,
+            "notification": messages.get(message),
+            "search_name": name,
+            "search_phone": phone,
+            "search_email": email,
+            "search_performed": any(
+                value.strip()
+                for value in (name, phone, email)
+            ),
+        },
+    )
+
+
+# ==========================================
+# 10. نمایش فرم افزودن کاربر
+# ==========================================
+
+@app.get("/add", response_class=HTMLResponse)
+def show_add_form(
+    request: Request,
+    admin: dict = Depends(require_admin),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="add.html",
+        context={
+            "student": None,
+            "page_title": "افزودن کاربر جدید",
+            "form_action": "/add",
+            "submit_text": "ثبت کاربر",
+        },
+    )
+
+
+# ==========================================
+# 11. نمایش فرم ویرایش کاربر
+# ==========================================
+
+@app.get(
+    "/add/{student_id}",
+    response_class=HTMLResponse,
+)
+def show_edit_form(
+    request: Request,
+    student_id: str,
+    admin: dict = Depends(require_admin),
+):
+    mongo_id = parse_student_id(student_id)
+
+    student = students_collection.find_one({
+        "_id": mongo_id
+    })
+
+    if student is None:
+        raise HTTPException(
+            status_code=404,
+            detail="student not found",
+        )
+
+    student = serialize_student(student)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="add.html",
+        context={
+            "student": student,
+            "page_title": "ویرایش اطلاعات کاربر",
+            "form_action": f"/add?student_id={student_id}",
+            "submit_text": "ذخیره تغییرات",
+        },
+    )
+
+
+# ==========================================
+# 12. افزودن یا ویرایش کاربر
+# ==========================================
+
+@app.post("/add")
+def save_student_from_page(
+    request: Request,
+    student_id: str | None = None,
+    name: str = Form(""),
+    age: str = Form(""),
+    birth_date: str = Form(""),
+    father_name: str = Form(""),
+    birth_place: str = Form(""),
+    phone: str = Form(""),
+    email: str = Form(""),
+    address: str = Form(""),
+    admin: dict = Depends(require_admin),
+):
+    existing_student = None
+    mongo_id = None
+
+    # بررسی اینکه عملیات افزودن است یا ویرایش
+    if student_id:
+        mongo_id = parse_student_id(student_id)
+
+        existing_student = students_collection.find_one({
+            "_id": mongo_id
+        })
+
+        if existing_student is None:
+            raise HTTPException(
+                status_code=404,
+                detail="کاربر پیدا نشد.",
+            )
+
+    form_data = {
+        "name": name,
+        "age": age,
+        "birth_date": birth_date,
+        "father_name": father_name,
+        "birth_place": birth_place,
+        "phone": phone,
+        "email": email,
+        "address": address,
+    }
+
+    is_editing = existing_student is not None
+
+    page_title = (
+        "ویرایش اطلاعات کاربر"
+        if is_editing
+        else "افزودن کاربر جدید"
+    )
+
+    form_action = (
+        f"/add?student_id={student_id}"
+        if is_editing
+        else "/add"
+    )
+
+    submit_text = (
+        "ذخیره تغییرات"
+        if is_editing
+        else "ثبت کاربر"
+    )
+
+    # اعتبارسنجی اطلاعات
+    try:
+        student = Student(
+            name=name,
+            age=age,
+            birth_date=birth_date,
+            father_name=father_name,
+            birth_place=birth_place,
+            phone=phone,
+            email=email,
+            address=address.strip() or None,
+        )
+
+    except ValidationError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="add.html",
+            context={
+                "student": (
+                    serialize_student(existing_student)
+                    if existing_student
+                    else None
+                ),
+                "page_title": page_title,
+                "form_action": form_action,
+                "submit_text": submit_text,
+                "errors": get_persian_errors(exc),
+                "form_data": form_data,
+            },
+            status_code=422,
+        )
+
+    student_data = student.model_dump(mode="json")
+
+    # ذخیره اطلاعات جدید یا ویرایش اطلاعات قبلی
+    if is_editing:
+        students_collection.update_one(
+            {"_id": mongo_id},
+            {"$set": student_data},
+        )
+
+        message = "updated"
+
+    else:
+        students_collection.insert_one(student_data)
+        message = "added"
+
+    return RedirectResponse(
+        url=f"/?message={message}",
+        status_code=303,
+    )
+
+
+# ==========================================
+# 13. حذف کاربر از صفحه وب
+# ==========================================
+
+@app.post("/students/{student_id}/delete")
+def delete_student_from_page(
+    student_id: str,
+    admin: dict = Depends(require_admin),
+):
+    mongo_id = parse_student_id(student_id)
+
+    result = students_collection.delete_one({
+        "_id": mongo_id
+    })
+
+    if result.deleted_count == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="student not found",
+        )
+
+    return RedirectResponse(
+        url="/?message=deleted",
+        status_code=303,
+    )
+
+
+# ==========================================
+# 14. API فهرست، جست‌وجو، مرتب‌سازی و صفحه‌بندی
+# ==========================================
+
+@app.get("/students")
+def get_students(
+    name: str | None = None,
+    age: int | None = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    sort: str | None = Query(
+        default=None,
+        pattern="^(name|name_desc|age|age_desc)$",
+    ),
+    admin: dict = Depends(require_api_admin),
+):
+    result = [
+        serialize_student(student)
+        for student in students_collection.find({})
+    ]
+
+    # جست‌وجو بر اساس نام
+    if name is not None:
+        result = [
+            student
+            for student in result
+            if name.lower() in student["name"].lower()
+        ]
+
+    # جست‌وجو بر اساس سن
+    if age is not None:
+        result = [
+            student
+            for student in result
+            if student["age"] == age
+        ]
+
+    # مرتب‌سازی
+    if sort == "name":
+        result = sorted(
+            result,
+            key=lambda student: student["name"].lower(),
+        )
+
+    elif sort == "name_desc":
+        result = sorted(
+            result,
+            key=lambda student: student["name"].lower(),
+            reverse=True,
+        )
+
+    elif sort == "age":
+        result = sorted(
+            result,
+            key=lambda student: student["age"],
+        )
+
+    elif sort == "age_desc":
+        result = sorted(
+            result,
+            key=lambda student: student["age"],
+            reverse=True,
+        )
+
+    total = len(result)
+
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "students": result[skip:skip + limit],
+    }
+
+
+# ==========================================
+# 15. API دریافت کاربر با شناسه
+# ==========================================
+
+@app.get("/students/{student_id}")
+def get_student(
+    student_id: str,
+    admin: dict = Depends(require_api_admin),
+):
+    mongo_id = parse_student_id(student_id)
+
+    student = students_collection.find_one({
+        "_id": mongo_id
+    })
+
+    if student is None:
+        raise HTTPException(
+            status_code=404,
+            detail="student not found",
+        )
+
+    return serialize_student(student)
+
+
+# ==========================================
+# 16. API افزودن کاربر
+# ==========================================
+
+@app.post("/students")
+def create_student(
+    student: Student,
+    admin: dict = Depends(require_api_admin),
+):
+    student_data = student.model_dump(mode="json")
+
+    result = students_collection.insert_one(student_data)
+
+    return {
+        "_id": str(result.inserted_id),
+        **student_data,
+    }
+
+
+# ==========================================
+# 17. API ویرایش کاربر
+# ==========================================
+
+@app.put("/students/{student_id}")
+def update_student(
+    student_id: str,
+    student: Student,
+    admin: dict = Depends(require_api_admin),
+):
+    mongo_id = parse_student_id(student_id)
+
+    result = students_collection.update_one(
+        {"_id": mongo_id},
+        {"$set": student.model_dump(mode="json")},
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="student not found",
+        )
+
+    updated_student = students_collection.find_one({
+        "_id": mongo_id
+    })
+
+    return serialize_student(updated_student)
+
+
+# ==========================================
+# 18. API حذف کاربر
+# ==========================================
+
+@app.delete("/students/{student_id}")
+def delete_student(
+    student_id: str,
+    admin: dict = Depends(require_api_admin),
+):
+    mongo_id = parse_student_id(student_id)
+
+    result = students_collection.delete_one({
+        "_id": mongo_id
+    })
+
+    if result.deleted_count == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="student not found",
+        )
+
+    return {
+        "message": "student deleted",
+        "_id": student_id,
+    }

@@ -1,58 +1,351 @@
-
+import os
 import re
+import time
+import secrets
+import hmac
 from datetime import date
+from urllib import request
 
 from bson import ObjectId
 from bson.errors import InvalidId
-from fastapi import FastAPI, Form, HTTPException, Query, Request
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr, Field, ValidationError
+from starlette.middleware.sessions import SessionMiddleware
 
-from database import students_collection
+from database import admins_collection, students_collection
+from security import verify_password
 
+load_dotenv()
+
+# تنظیمات محدودیت ورود مدیر
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 10 * 60
+LOGIN_BLOCK_SECONDS = 15 * 60
+
+# ذخیره تلاش‌ها و زمان مسدودشدن هر IP
+login_attempts = {}
+login_blocked_until = {}
+
+# ==========================================
+# 1. تنظیمات اصلی برنامه
+# ==========================================
 
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+SECRET_KEY = os.environ.get("SESSION_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError(
+        "متغیر SESSION_SECRET_KEY تنظیم نشده است."
+    )
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    session_cookie="user_session",
+    max_age=60 * 60,
+    same_site="lax",
+    https_only=False,
+)
+
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static",
+)
+
+
+def get_csrf_token(request: Request) -> str:
+    token = request.session.get("csrf_token")
+
+    if not token:
+        token = secrets.token_urlsafe(32)
+        request.session["csrf_token"] = token
+
+    return token
+
+
+def validate_csrf_token(
+    request: Request,
+    csrf_token: str
+) -> None:
+
+    session_token = request.session.get("csrf_token")
+
+    if (
+        not session_token
+        or not csrf_token
+        or not hmac.compare_digest(session_token, csrf_token)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="درخواست نامعتبر است."
+        )
+
+
 templates = Jinja2Templates(directory="templates")
 
+# ==========================================
+# 2. خطای اختصاصی ورود مدیر
+# ==========================================
 
-# تبدیل شناسه دریافتی به ObjectId
+class AdminLoginRequired(Exception):
+    """خطای اختصاصی برای صفحات نیازمند ورود مدیر."""
+    pass
+
+@app.exception_handler(AdminLoginRequired)
+async def admin_login_required_handler(
+    request: Request,
+    exc: AdminLoginRequired,
+):
+    return RedirectResponse(
+        url="/login",
+        status_code=303,
+    )
+
+# ==========================================
+# 3. بررسی ورود مدیر برای صفحات وب
+# ==========================================
+
+def require_admin(request: Request):
+    admin_id = request.session.get("admin_id")
+
+    # اگر مدیر وارد نشده باشد
+    if not admin_id:
+        raise AdminLoginRequired()
+
+    # تبدیل شناسه ذخیره‌شده به ObjectId
+    try:
+        mongo_admin_id = ObjectId(admin_id)
+
+    except (InvalidId, TypeError):
+        request.session.clear()
+        raise AdminLoginRequired()
+
+    # بررسی وجود حساب مدیر در MongoDB
+    admin = admins_collection.find_one({
+        "_id": mongo_admin_id
+    })
+
+    if admin is None:
+        request.session.clear()
+        raise AdminLoginRequired()
+
+    return admin
+
+# ==========================================
+# 4. ورود مدیر
+# ==========================================
+
+@app.get("/login", response_class=HTMLResponse)
+def show_login_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"error": None},
+    )
+
+@app.post("/login")
+def login_admin(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    # شناسایی IP درخواست‌کننده
+    client_ip = (
+        request.client.host
+        if request.client
+        else "unknown"
+    )
+
+    # زمان فعلی
+    now = time.monotonic()
+
+    # بررسی مسدودبودن IP
+    blocked_until = login_blocked_until.get(
+        client_ip, 0
+    )
+
+    if now < blocked_until:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "error": (
+                    "تلاش‌های ورود بیش از حد مجاز بوده است. "
+                    "لطفاً ۱۵ دقیقه دیگر دوباره تلاش کنید."
+                )
+            },
+            status_code=429,
+        )
+
+    # پاک‌کردن مسدودیت منقضی‌شده
+    if blocked_until:
+        login_blocked_until.pop(client_ip, None)
+        login_attempts.pop(client_ip, None)
+
+    # نگه‌داشتن تلاش‌های ۱۰ دقیقه اخیر
+    attempts = login_attempts.get(client_ip, [])
+
+    attempts = [
+        attempt_time
+        for attempt_time in attempts
+        if now - attempt_time < LOGIN_WINDOW_SECONDS
+    ]
+
+    login_attempts[client_ip] = attempts
+
+    # جست‌وجوی حساب مدیر در MongoDB
+    admin = admins_collection.find_one({
+        "username": username.strip()
+    })
+
+    # بررسی نام کاربری و رمز عبور
+    if (
+        admin is None
+        or not verify_password(
+            password,
+            admin["hashed_password"],
+        )
+    ):
+        # ثبت تلاش ناموفق
+        attempts.append(now)
+        login_attempts[client_ip] = attempts
+
+        # رسیدن به حد مجاز
+        if len(attempts) >= MAX_LOGIN_ATTEMPTS:
+            login_blocked_until[client_ip] = (
+                now + LOGIN_BLOCK_SECONDS
+            )
+
+            login_attempts.pop(client_ip, None)
+
+            error_message = (
+                "تعداد تلاش‌های ناموفق بیش از حد مجاز است. "
+                "ورود شما برای ۱۵ دقیقه مسدود شد."
+            )
+        else:
+            error_message = (
+                "نام کاربری یا رمز عبور اشتباه است."
+            )
+
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "error": error_message
+            },
+            status_code=401,
+        )
+
+    # ورود موفق: پاک‌کردن شمارنده و مسدودیت
+    login_attempts.pop(client_ip, None)
+    login_blocked_until.pop(client_ip, None)
+
+    # پاک‌کردن اطلاعات نشست قبلی
+    request.session.clear()
+
+    # ذخیره شناسه مدیر در نشست
+    request.session["admin_id"] = str(admin["_id"])
+
+    # انتقال به صفحه اصلی
+    return RedirectResponse(
+        url="/",
+        status_code=303,
+    )
+
+
+@app.post("/logout")
+async def logout(
+    request: Request,
+    csrf_token: str = Form(...),
+    admin: dict = Depends(require_admin),
+):
+    # بررسی توکن CSRF
+    validate_csrf_token(request, csrf_token)
+
+    # پاک کردن اطلاعات نشست مدیر
+    request.session.clear()
+
+    # انتقال به صفحه ورود
+    return RedirectResponse(
+        url="/login",
+        status_code=303,
+    )
+
+
+# ==========================================
+# 5. توابع کمکی شناسه و اطلاعات کاربر
+# ==========================================
+
 def parse_student_id(student_id: str) -> ObjectId:
     try:
         return ObjectId(student_id)
+
     except (InvalidId, TypeError):
         raise HTTPException(
             status_code=400,
             detail="Invalid student ID",
         )
 
-
-# تبدیل سند MongoDB به داده قابل نمایش یا ارسال در JSON
 def serialize_student(student: dict) -> dict:
-    return {**student, "_id": str(student["_id"])}
+    return {
+        **student,
+        "_id": str(student["_id"]),
+    }
 
+# ==========================================
+# 6. مدل اعتبارسنجی اطلاعات کاربر
+# ==========================================
 
-# مدل اطلاعات کاربر
 class Student(BaseModel):
-    name: str = Field(min_length=2, max_length=50)
-    age: int = Field(ge=0, le=120)
+    name: str = Field(
+        min_length=2,
+        max_length=50,
+    )
+
+    age: int = Field(
+        ge=0,
+        le=120,
+    )
+
     birth_date: date
-    father_name: str = Field(min_length=2, max_length=50)
-    birth_place: str = Field(min_length=2, max_length=100)
-    phone: str = Field(pattern=r"^09\d{9}$")
+
+    father_name: str = Field(
+        min_length=2,
+        max_length=50,
+    )
+
+    birth_place: str = Field(
+        min_length=2,
+        max_length=100,
+    )
+
+    phone: str = Field(
+        pattern=r"^09\d{9}$",
+    )
+
     email: EmailStr
+
     address: str | None = Field(
         default=None,
         min_length=2,
         max_length=200,
     )
 
+# ==========================================
+# 7. تبدیل خطاهای اعتبارسنجی به فارسی
+# ==========================================
 
-# تبدیل خطاهای اعتبارسنجی به پیام فارسی
-def get_persian_errors(exc: ValidationError) -> list[str]:
+def get_persian_errors(
+    exc: ValidationError,
+) -> list[str]:
+
     messages = {
         "name": "نام باید بین ۲ تا ۵۰ کاراکتر باشد.",
         "age": "سن باید عددی بین ۰ تا ۱۲۰ باشد.",
@@ -68,6 +361,7 @@ def get_persian_errors(exc: ValidationError) -> list[str]:
 
     for error in exc.errors():
         field = str(error["loc"][-1])
+
         message = messages.get(
             field,
             "یکی از اطلاعات واردشده معتبر نیست.",
@@ -78,8 +372,10 @@ def get_persian_errors(exc: ValidationError) -> list[str]:
 
     return errors
 
+# ==========================================
+# 8. صفحه اصلی و جست‌وجوی کاربران
+# ==========================================
 
-# صفحه اصلی و جست‌وجوی کاربران
 @app.get("/", response_class=HTMLResponse)
 def home(
     request: Request,
@@ -87,6 +383,7 @@ def home(
     name: str = "",
     phone: str = "",
     email: str = "",
+    admin: dict = Depends(require_admin),
 ):
     search_filter = {}
 
@@ -135,17 +432,25 @@ def home(
             "notification": messages.get(message),
             "search_name": name,
             "search_phone": phone,
+            "csrf_token": get_csrf_token(request),
             "search_email": email,
             "search_performed": any(
-                value.strip() for value in (name, phone, email)
+                value.strip()
+
+                for value in (name, phone, email)
             ),
         },
     )
 
+# ==========================================
+# 9. نمایش فرم افزودن کاربر
+# ==========================================
 
-# نمایش فرم افزودن کاربر
 @app.get("/add", response_class=HTMLResponse)
-def show_add_form(request: Request):
+def show_add_form(
+    request: Request,
+    admin: dict = Depends(require_admin),
+):
     return templates.TemplateResponse(
         request=request,
         name="add.html",
@@ -154,15 +459,28 @@ def show_add_form(request: Request):
             "page_title": "افزودن کاربر جدید",
             "form_action": "/add",
             "submit_text": "ثبت کاربر",
+            "csrf_token": get_csrf_token(request),
         },
     )
 
+# ==========================================
+# 10. نمایش فرم ویرایش کاربر
+# ==========================================
 
-# نمایش فرم ویرایش کاربر
-@app.get("/add/{student_id}", response_class=HTMLResponse)
-def show_edit_form(request: Request, student_id: str):
+@app.get(
+    "/add/{student_id}",
+    response_class=HTMLResponse,
+)
+def show_edit_form(
+    request: Request,
+    student_id: str,
+    admin: dict = Depends(require_admin),
+):
     mongo_id = parse_student_id(student_id)
-    student = students_collection.find_one({"_id": mongo_id})
+
+    student = students_collection.find_one({
+        "_id": mongo_id
+    })
 
     if student is None:
         raise HTTPException(
@@ -183,8 +501,10 @@ def show_edit_form(request: Request, student_id: str):
         },
     )
 
+# ==========================================
+# 11. افزودن یا ویرایش کاربر
+# ==========================================
 
-# افزودن یا ویرایش کاربر با یک تابع مشترک
 @app.post("/add")
 def save_student_from_page(
     request: Request,
@@ -197,16 +517,22 @@ def save_student_from_page(
     phone: str = Form(""),
     email: str = Form(""),
     address: str = Form(""),
+    admin: dict = Depends(require_admin),
+    csrf_token: str = Form(...),
 ):
+
+    validate_csrf_token(request, csrf_token)
+
     existing_student = None
     mongo_id = None
 
     # بررسی اینکه عملیات افزودن است یا ویرایش
     if student_id:
         mongo_id = parse_student_id(student_id)
-        existing_student = students_collection.find_one(
-            {"_id": mongo_id}
-        )
+
+        existing_student = students_collection.find_one({
+            "_id": mongo_id
+        })
 
         if existing_student is None:
             raise HTTPException(
@@ -245,7 +571,7 @@ def save_student_from_page(
         else "ثبت کاربر"
     )
 
-    # اعتبارسنجی اطلاعات برای هر دو عملیات
+    # اعتبارسنجی اطلاعات
     try:
         student = Student(
             name=name,
@@ -279,13 +605,15 @@ def save_student_from_page(
 
     student_data = student.model_dump(mode="json")
 
-    # ذخیره اطلاعات جدید یا اصلاح اطلاعات موجود
+    # ذخیره اطلاعات جدید یا ویرایش اطلاعات قبلی
     if is_editing:
         students_collection.update_one(
             {"_id": mongo_id},
             {"$set": student_data},
         )
+
         message = "updated"
+
     else:
         students_collection.insert_one(student_data)
         message = "added"
@@ -296,161 +624,37 @@ def save_student_from_page(
     )
 
 
-# حذف کاربر از صفحه
+# ==========================================
+# 12. حذف کاربر از صفحه وب
+# ==========================================
+
 @app.post("/students/{student_id}/delete")
-def delete_student_from_page(student_id: str):
+def delete_student_from_page(
+    request: Request,
+    student_id: str,
+    csrf_token: str = Form(...),
+    admin: dict = Depends(require_admin),
+):
+    # بررسی توکن CSRF پیش از حذف
+    validate_csrf_token(request, csrf_token)
+
+    # تبدیل شناسه کاربر به ObjectId
     mongo_id = parse_student_id(student_id)
 
-    result = students_collection.delete_one(
-        {"_id": mongo_id}
-    )
+    # حذف کاربر از MongoDB
+    result = students_collection.delete_one({
+        "_id": mongo_id
+    })
 
+    # بررسی پیدا شدن کاربر
     if result.deleted_count == 0:
         raise HTTPException(
             status_code=404,
             detail="student not found",
         )
 
+    # بازگشت به صفحه اصلی
     return RedirectResponse(
         url="/?message=deleted",
         status_code=303,
     )
-
-
-# API: فهرست، جست‌وجو، مرتب‌سازی و صفحه‌بندی
-@app.get("/students")
-def get_students(
-    name: str | None = None,
-    age: int | None = None,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
-    sort: str | None = Query(
-        default=None,
-        pattern="^(name|name_desc|age|age_desc)$",
-    ),
-):
-    # دریافت مستقیم کاربران از MongoDB
-    result = [
-        serialize_student(student)
-        for student in students_collection.find({})
-    ]
-
-    if name is not None:
-        result = [
-            student
-            for student in result
-            if name.lower() in student["name"].lower()
-        ]
-
-    if age is not None:
-        result = [
-            student
-            for student in result
-            if student["age"] == age
-        ]
-
-    if sort == "name":
-        result = sorted(
-            result,
-            key=lambda student: student["name"].lower(),
-        )
-    elif sort == "name_desc":
-        result = sorted(
-            result,
-            key=lambda student: student["name"].lower(),
-            reverse=True,
-        )
-    elif sort == "age":
-        result = sorted(
-            result,
-            key=lambda student: student["age"],
-        )
-    elif sort == "age_desc":
-        result = sorted(
-            result,
-            key=lambda student: student["age"],
-            reverse=True,
-        )
-
-    total = len(result)
-
-    return {
-        "total": total,
-        "skip": skip,
-        "limit": limit,
-        "students": result[skip:skip + limit],
-    }
-
-
-# API: دریافت کاربر با شناسه MongoDB
-@app.get("/students/{student_id}")
-def get_student(student_id: str):
-    mongo_id = parse_student_id(student_id)
-
-    student = students_collection.find_one(
-        {"_id": mongo_id}
-    )
-
-    if student is None:
-        raise HTTPException(
-            status_code=404,
-            detail="student not found",
-        )
-
-    return serialize_student(student)
-
-
-# API: افزودن کاربر
-@app.post("/students")
-def create_student(student: Student):
-    student_data = student.model_dump(mode="json")
-    result = students_collection.insert_one(student_data)
-
-    return {
-        "_id": str(result.inserted_id),
-        **student_data,
-    }
-
-
-# API: ویرایش کاربر
-@app.put("/students/{student_id}")
-def update_student(student_id: str, student: Student):
-    mongo_id = parse_student_id(student_id)
-
-    result = students_collection.update_one(
-        {"_id": mongo_id},
-        {"$set": student.model_dump(mode="json")},
-    )
-
-    if result.matched_count == 0:
-        raise HTTPException(
-            status_code=404,
-            detail="student not found",
-        )
-
-    updated_student = students_collection.find_one(
-        {"_id": mongo_id}
-    )
-
-    return serialize_student(updated_student)
-
-
-# API: حذف کاربر
-@app.delete("/students/{student_id}")
-def delete_student(student_id: str):
-    mongo_id = parse_student_id(student_id)
-
-    result = students_collection.delete_one(
-        {"_id": mongo_id}
-    )
-
-    if result.deleted_count == 0:
-        raise HTTPException(
-            status_code=404,
-            detail="student not found",
-        )
-
-    return {
-        "message": "student deleted",
-        "_id": student_id,
-    }

@@ -850,3 +850,26 @@ tbody tr:hover {
         transition-duration: 0.01ms !important;
     }
 }
+
+
+
+.logout-form {
+    display: inline-block;
+    margin: 0;
+}
+
+.btn-logout {
+    background-color: #dc2626;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-logout:hover {
+    background-color: #b91c1c;
+}

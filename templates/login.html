@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ورود به سامانه</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <main class="container">
+        <section class="panel form-panel">
+
+            <h1>ورود به سامانه مدیریت کاربران</h1>
+
+            {% if error %}
+                <p class="error-message">{{ error }}</p>
+            {% endif %}
+
+            <form action="/login" method="post">
+
+                <label for="username">نام کاربری</label>
+
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    autocomplete="username"
+                    required
+                >
+
+                <label for="password">رمز عبور</label>
+
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button type="submit" class="btn-add">
+                    ورود به سامانه
+                </button>
+
+            </form>
+
+        </section>
+    </main>
+
+</body>
+</html>

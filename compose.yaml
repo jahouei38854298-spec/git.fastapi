@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    image: fastapi_app:local
+    container_name: fastapi_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URL: mongodb://mongo:27017/
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:?SESSION_SECRET_KEY is required}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongo:
+    image: docker.arvancloud.ir/mongo:8
+    container_name: fastapi_mongo
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  mongodb_data:
