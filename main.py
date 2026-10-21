@@ -494,11 +494,12 @@ def show_edit_form(
         request=request,
         name="add.html",
         context={
-            "student": student,
-            "page_title": "ویرایش اطلاعات کاربر",
-            "form_action": f"/add?student_id={student_id}",
-            "submit_text": "ذخیره تغییرات",
-        },
+    "student": student,
+    "page_title": "ویرایش اطلاعات کاربر",
+    "form_action": f"/add?student_id={student_id}",
+    "submit_text": "ذخیره تغییرات",
+    "csrf_token": get_csrf_token(request),
+    },
     )
 
 # ==========================================
@@ -518,9 +519,8 @@ def save_student_from_page(
     email: str = Form(""),
     address: str = Form(""),
     admin: dict = Depends(require_admin),
-    csrf_token: str = Form(...),
+    csrf_token: str =Form(...),
 ):
-
     validate_csrf_token(request, csrf_token)
 
     existing_student = None
@@ -599,6 +599,7 @@ def save_student_from_page(
                 "submit_text": submit_text,
                 "errors": get_persian_errors(exc),
                 "form_data": form_data,
+                "csrf_token": get_csrf_token(request),
             },
             status_code=422,
         )
