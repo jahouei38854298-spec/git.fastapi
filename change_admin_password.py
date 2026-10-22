@@ -14,7 +14,7 @@ def main():
     })
 
     if admin is None:
-        print("خطا: مدیر با نام کاربری admin پیدا نشد.")
+        print("خطا: مدیر با نام کاربری javad پیدا نشد.")
         return
 
     password = getpass.getpass("رمز عبور جدید را وارد کن: ")
